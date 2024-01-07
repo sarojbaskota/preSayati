@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\User;
 use App\Models\Message;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use App\Http\Controllers\Api\BaseApiController;
+use App\Http\Resources\MessageWithFriend as MessageWithFriendResource;
+use App\Http\Resources\MessageConversation as MessageConversationResource;
 
 class MessageController extends BaseApiController
 {
@@ -31,8 +34,43 @@ class MessageController extends BaseApiController
     public function index()
     {
         try {
-            $data  = Auth::user()->messages;
-            return $this->sendSuccess($data, 'Messages retrive successfully.');
+            $userId = Auth::id();
+
+            // Get all users except the authenticated user
+            $users = User::where('id', '!=', $userId)->where('account_status',1)->get();
+            
+            $latestMessagesByUser = [];
+
+            foreach ($users as $user) {
+                $friendId = $user->id;
+
+                // Query for the latest message where the authenticated user is either the sender or receiver
+                $latestMessage = Message::where(function ($query) use ($userId, $friendId) {
+                        $query->where('from', $userId)->where('to', $friendId);
+                    })
+                    ->orWhere(function ($query) use ($userId, $friendId) {
+                        $query->where('from', $friendId)->where('to', $userId);
+                    })
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if ($latestMessage) {
+                    $latestMessagesByUser[$user->id] = [
+                        'user' => $user,
+                        'latest_message' => $latestMessage
+                    ];
+                }
+            }
+            
+            $transformedData = collect($latestMessagesByUser)->map(function ($item) {
+                return (object) [
+                    'user' => (object) $item['user'],
+                    'latest_message' => (object) $item['latest_message']
+                ];
+            });
+            $response =  MessageWithFriendResource::collection($transformedData);
+            return $this->sendSuccess($response, 'Messages retrive successfully.');
+
         } catch (ValidationException $exception) {
             // Handle validation errors
             return $this->sendValidationFail($exception);
@@ -93,11 +131,24 @@ class MessageController extends BaseApiController
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show($id)
     {
         try {
-            $data  = $this->message->where('from',Auth::user()->id)->where('to',$id)->get();
-            return $this->sendSuccess($data, 'Messages retrive successfully.');
+            $loggedInUserId = Auth::user()->id;
+            $friendUserId = $id; 
+
+            $conversations = Message::with(['sender', 'receiver'])
+            ->where(function ($query) use ($loggedInUserId, $friendUserId) {
+                $query->where('from', $loggedInUserId)->where('to', $friendUserId);
+            })
+            ->orWhere(function ($query) use ($loggedInUserId, $friendUserId) {
+                $query->where('from', $friendUserId)->where('to', $loggedInUserId);
+            })
+            ->orderBy('created_at', 'asc')
+            ->get();      
+
+            $response =  MessageConversationResource::collection($conversations);
+            return $this->sendSuccess($response, 'Messages retrive successfully.');
         } catch (ValidationException $exception) {
             // Handle validation errors
             return $this->sendValidationFail($exception);

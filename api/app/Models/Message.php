@@ -15,4 +15,13 @@ class Message extends Model
     {
         return $this->belongsToMany(User::class);
     }
+    public function sender()
+    {
+         return $this->belongsTo(User::class, 'from');
+    }
+
+    public function receiver()
+    {
+          return $this->belongsTo(User::class, 'to');
+    }
 }

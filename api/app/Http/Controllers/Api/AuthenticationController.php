@@ -41,8 +41,13 @@ class AuthenticationController extends BaseApiController
                 $tokenResult = $user->createToken('chat'); // This returns a PersonalAccessTokenResult object
                 $accessToken = $tokenResult->accessToken;  // Extract the access token string
                 $data = [
-                    'token' => $accessToken,
-                    'user'  => $user
+                    'accessToken' => $accessToken ,
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'fname' => ucwords($user->fname),
+                    'email' => $user->email,
+                    'avatar' => $user->avatar,
+                    'message' => 'Login successful!',
                 ];
                 return $this->sendSuccess($data, 'User login successfully.');
             }else{
@@ -120,14 +125,21 @@ class AuthenticationController extends BaseApiController
                 'username' => 'required|string|max:255',
                 'email' => 'required|email|unique:users,email,'.Auth::user()->id.',id',
             ]);
+            $user = Auth::user();
+            if($this->request->password){
+                $payload = [
+                    'password' => $this->request->password,
+                ];
+                $user->update($payload);
+            }
             $payload = [
                 'fname' => $this->request->fname,
                 'lname' => $this->request->lname,
                 'username' => $this->request->lname,
                 'email' => $this->request->email,
-                'password' => $this->request->password
+                'location' => $this->request->location,
+                'online' => $this->request->onlineStatus?1:0,
             ];
-            $user = Auth::user();
             $user->update($payload);
             
             return $this->sendSuccess($user, 'Profile Updated successfully.');
