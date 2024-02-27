@@ -15,13 +15,14 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('user_id'); 
             $table->unsignedBigInteger('friend_id'); 
+            $table->unsignedBigInteger('sent_by'); 
             $table->integer('confirm')->default(0); 
+            $table->timestamp('accepted_at')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('friend_id')->references('id')->on('users')->onDelete('cascade');
-
-            $table->unique(['user_id', 'friend_id']);
+            $table->foreign('sent_by')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

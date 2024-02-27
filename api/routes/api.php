@@ -21,22 +21,29 @@ use App\Http\Controllers\Api\FriendController;
 // });
 
 Route::group(['namespace' => 'Api', 'prefix' => 'v1'], function () {
+    // auth 
     Route::post('signin', [AuthenticationController::class, 'signin']);
     Route::post('signup', [AuthenticationController::class, 'signup']);
 
     Route::middleware('auth:api')->group( function () {
+      // profile 
       Route::get('profile', [AuthenticationController::class, 'get']);
       Route::post('profile', [AuthenticationController::class, 'update']);
+      Route::post('online/status', [AuthenticationController::class, 'changeStatus']);
+
       //message
       Route::post('message/send', [MessageController::class, 'store']);
       Route::get('message/sent/list', [MessageController::class, 'index']);
       Route::get('message/sent/list/{id}', [MessageController::class, 'show']);
 
+      // friend 
       Route::get('friends/list', [FriendController::class, 'index']);
       Route::post('friends/add', [FriendController::class, 'add']);
       Route::post('friends/confirm-request', [FriendController::class, 'confirm']);
       Route::get('friends/list/request', [FriendController::class, 'request']);
       Route::post('friends/unfriend', [FriendController::class, 'unfriend']);
-      
+      Route::get('friends/{id}/selected', [FriendController::class, 'selected']);   
+      Route::get('friends/list/you-may-know', [FriendController::class, 'youMayKnow']);
+         
     });
   });

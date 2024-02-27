@@ -132,6 +132,16 @@ class AuthenticationController extends BaseApiController
                 ];
                 $user->update($payload);
             }
+            if($this->request->hasFile('avatar_file')){
+                $image = $this->request->file('avatar_file');
+                $fileName = time().'-'.$image->getClientOriginalName();
+                // Upload the new file
+                $path = $image->storeAs('users/profiles', $fileName, 'public');
+                $new = [
+                    'avatar' =>  $path,
+                ];
+                $user->update($new);
+            }
             $payload = [
                 'fname' => $this->request->fname,
                 'lname' => $this->request->lname,
@@ -143,6 +153,28 @@ class AuthenticationController extends BaseApiController
             $user->update($payload);
             
             return $this->sendSuccess($user, 'Profile Updated successfully.');
+
+        } catch (ValidationException $exception) {
+            // Handle validation errors
+            return $this->sendValidationFail($exception);
+        } catch (\Exception $exception) {
+            // Handle other exceptions
+            return $this->sendError('Failed to retrive profile.'.$exception->getMessage(), 500);
+        }
+    }
+     /**
+    * Handle an incoming authentication request.
+    */
+    public function changeStatus()
+    {
+        try {
+            $user = Auth::user();
+                $payload = [
+                    'online' => ($user->online == 1)?0:1,
+                ];
+            $user->update($payload);
+           
+            return $this->sendSuccess($user, 'Status Updated successfully.');
 
         } catch (ValidationException $exception) {
             // Handle validation errors
